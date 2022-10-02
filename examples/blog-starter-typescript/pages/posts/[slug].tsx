@@ -11,6 +11,8 @@ import Head from 'next/head'
 import { CMS_NAME } from '../../lib/constants'
 import markdownToHtml from '../../lib/markdownToHtml'
 import PostType from '../../types/post'
+import { useCallback, useEffect, useState } from 'react'
+import { reactLocalStorage } from 'reactjs-localstorage'
 
 type Props = {
   post: PostType
@@ -20,6 +22,58 @@ type Props = {
 
 const Post = ({ post, morePosts, preview }: Props) => {
   const router = useRouter()
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+
+  useEffect(() => {
+    const isLoggedIn = reactLocalStorage.get('isLoggedIn', false)
+    setIsLoggedIn(isLoggedIn)
+  }, [])
+
+  const onUsernameChange = useCallback((e) => {
+    setUsername(e.target.value)
+  }, [])
+
+  const onPasswordChange = useCallback((e) => {
+    setPassword(e.target.value)
+  }, [])
+
+  const handleLogin = useCallback(() => {
+    if (username === 'complete' && password === 'complete') {
+      reactLocalStorage.set('isLoggedIn', true)
+      setIsLoggedIn(true)
+    } else {
+      alert('You have entered wrong username or password')
+    }
+  }, [username, password])
+
+  const renderLoginModal = post.isPremium ? !isLoggedIn : false
+
+  if (renderLoginModal) {
+    return (
+      <div>
+        <span>Please log in to see article about {post.title}</span>
+        <div style={{ marginTop: 10 }}>
+          <input
+            type="text"
+            value={username}
+            onChange={onUsernameChange}
+            style={{ borderWidth: 1 }}
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={onPasswordChange}
+            style={{ borderWidth: 1 }}
+          />
+          <button onClick={handleLogin}>Log In</button>
+        </div>
+      </div>
+    )
+  }
+
   if (!router.isFallback && !post?.slug) {
     return <ErrorPage statusCode={404} />
   }
@@ -70,6 +124,7 @@ export async function getStaticProps({ params }: Params) {
     'content',
     'ogImage',
     'coverImage',
+    'isPremium',
   ])
   const content = await markdownToHtml(post.content || '')
 
